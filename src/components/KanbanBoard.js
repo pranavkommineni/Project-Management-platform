@@ -1,161 +1,500 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+
 import KanbanColumn from "./KanbanColumn";
 import TaskModal from "./TaskModal";
 import ActivityFeed from "./ActivityFeed";
 
 const STAGES = [
-  { id: "todo", label: "To Do", color: "var(--todo)" },
-  { id: "inprogress", label: "In Progress", color: "var(--inprogress)" },
-  { id: "done", label: "Done", color: "var(--done)" },
+  {
+    id: "todo",
+    label: "To Do",
+    color: "var(--todo)",
+  },
+  {
+    id: "inprogress",
+    label: "In Progress",
+    color: "var(--inprogress)",
+  },
+  {
+    id: "done",
+    label: "Done",
+    color: "var(--done)",
+  },
 ];
 
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
-  const [draggedId, setDraggedId] = useState(null);
-  const [activityKey, setActivityKey] = useState(0); // used to refresh activity feed
+  const [priorityFilter, setPriorityFilter] =
+    useState("");
 
-  const fetchTasks = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (priorityFilter) params.set("priority", priorityFilter);
-    const res = await fetch(`/api/tasks?${params}`);
-    const data = await res.json();
-    setTasks(data);
-  }, [search, priorityFilter]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  const [modalOpen, setModalOpen] =
+    useState(false);
+  const [editingTask, setEditingTask] =
+    useState(null);
 
-  const handleDrop = async (stage) => {
-    if (!draggedId) return;
-    const task = tasks.find((t) => t._id === draggedId);
-    if (!task || task.stage === stage) return;
+  const [draggedId, setDraggedId] =
+    useState(null);
 
-    // Optimistic update
-    setTasks((prev) =>
-      prev.map((t) => (t._id === draggedId ? { ...t, stage } : t))
-    );
+  const [activityKey, setActivityKey] =
+    useState(0);
 
-    await fetch(`/api/tasks/${draggedId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stage }),
+  const searchTimeout = useRef(null);
+
+  const refreshActivity = () => {
+    setActivityKey((prev) => prev + 1);
+  };
+
+  const apiRequest = async (
+    url,
+    options = {}
+  ) => {
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      ...options,
     });
 
-    setActivityKey((k) => k + 1);
-    setDraggedId(null);
-  };
+    if (!response.ok) {
+      let message = "Request failed";
 
-  const handleSave = async (data) => {
-    if (editingTask) {
-      await fetch(`/api/tasks/${editingTask._id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-    } else {
-      await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      try {
+        const err = await response.json();
+        message =
+          err.message ||
+          err.error ||
+          message;
+      } catch {}
+
+      throw new Error(message);
     }
-    setModalOpen(false);
+
+    if (response.status === 204) {
+      return null;
+    }
+
+    return response.json();
+  };
+
+  const fetchTasks = useCallback(
+    async (signal) => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const params =
+          new URLSearchParams();
+
+        params.set("all", "true");
+
+        if (search.trim()) {
+          params.set(
+            "search",
+            search.trim()
+          );
+        }
+
+        if (priorityFilter) {
+          params.set(
+            "priority",
+            priorityFilter
+          );
+        }
+
+        const response = await fetch(
+          `/api/tasks?${params.toString()}`,
+          {
+            signal,
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch tasks (${response.status})`
+          );
+        }
+
+        const data =
+          await response.json();
+
+        const taskList =
+          Array.isArray(data)
+            ? data
+            : data.tasks || [];
+
+        setTasks(taskList);
+      } catch (err) {
+        if (
+          err.name !== "AbortError"
+        ) {
+          console.error(err);
+          setError(
+            err.message ||
+              "Failed to load tasks"
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search, priorityFilter]
+  );
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    fetchTasks(controller.signal);
+
+    return () =>
+      controller.abort();
+  }, [fetchTasks]);
+
+  const handleSearch = (value) => {
+    if (searchTimeout.current) {
+      clearTimeout(
+        searchTimeout.current
+      );
+    }
+
+    searchTimeout.current =
+      setTimeout(() => {
+        setSearch(value);
+      }, 300);
+  };
+
+  const handleSave = async (
+    taskData
+  ) => {
+    try {
+      setError("");
+
+      if (editingTask?._id) {
+        await apiRequest(
+          `/api/tasks/${editingTask._id}`,
+          {
+            method: "PATCH",
+            body: JSON.stringify(
+              taskData
+            ),
+          }
+        );
+      } else {
+        await apiRequest(
+          "/api/tasks",
+          {
+            method: "POST",
+            body: JSON.stringify(
+              taskData
+            ),
+          }
+        );
+      }
+
+      await fetchTasks();
+
+      setModalOpen(false);
+      setEditingTask(null);
+
+      refreshActivity();
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err.message ||
+          "Failed to save task"
+      );
+    }
+  };
+
+  const handleDelete = async (
+    id
+  ) => {
+    const confirmed =
+      window.confirm(
+        "Delete this task?"
+      );
+
+    if (!confirmed) return;
+
+    try {
+      await apiRequest(
+        `/api/tasks/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      setTasks((prev) =>
+        prev.filter(
+          (task) =>
+            task._id !== id
+        )
+      );
+
+      refreshActivity();
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err.message ||
+          "Failed to delete task"
+      );
+    }
+  };
+
+  const handleDrop = async (
+    stage
+  ) => {
+    if (!draggedId) return;
+
+    try {
+      await apiRequest(
+        `/api/tasks/${draggedId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            stage,
+          }),
+        }
+      );
+
+      setTasks((prev) =>
+        prev.map((task) =>
+          task._id === draggedId
+            ? {
+                ...task,
+                stage,
+              }
+            : task
+        )
+      );
+
+      refreshActivity();
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err.message ||
+          "Failed to move task"
+      );
+    } finally {
+      setDraggedId(null);
+    }
+  };
+
+  const openCreate = () => {
     setEditingTask(null);
-    setActivityKey((k) => k + 1);
-    fetchTasks();
+    setModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    await fetch(`/api/tasks/${id}`, { method: "DELETE" });
-    setActivityKey((k) => k + 1);
-    fetchTasks();
+  const openEdit = (task) => {
+    setEditingTask(task);
+    setModalOpen(true);
   };
 
-  const openCreate = () => { setEditingTask(null); setModalOpen(true); };
-  const openEdit = (task) => { setEditingTask(task); setModalOpen(true); };
+  const groupedTasks = useMemo(
+    () => ({
+      todo: tasks.filter(
+        (task) =>
+          task.stage === "todo"
+      ),
+      inprogress: tasks.filter(
+        (task) =>
+          task.stage ===
+          "inprogress"
+      ),
+      done: tasks.filter(
+        (task) =>
+          task.stage === "done"
+      ),
+    }),
+    [tasks]
+  );
 
   return (
-    <div style={{ display: "flex", height: "calc(100vh - 64px)" }}>
-
-      {/* Board area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "auto" }}>
-
-        {/* Toolbar */}
-        <div style={{
-          background: "var(--surface)",
-          borderBottom: "1px solid var(--border)",
-          padding: "16px 24px",
+    <div
+      style={{
+        display: "flex",
+        height:
+          "calc(100vh - 64px)",
+      }}
+    >
+      <div
+        style={{
+          flex: 1,
           display: "flex",
-          gap: 12,
-          alignItems: "center",
-          flexShrink: 0,
-        }}>
+          flexDirection:
+            "column",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            background:
+              "var(--surface)",
+            borderBottom:
+              "1px solid var(--border)",
+            padding:
+              "16px 24px",
+            display: "flex",
+            gap: 12,
+            alignItems:
+              "center",
+            flexShrink: 0,
+          }}
+        >
           <input
             type="text"
-            placeholder="Search tasks…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ flex: 1, maxWidth: 300 }}
+            placeholder="Search tasks..."
+            defaultValue={search}
+            onChange={(e) =>
+              handleSearch(
+                e.target.value
+              )
+            }
+            style={{
+              flex: 1,
+              maxWidth: 320,
+            }}
           />
+
           <select
             value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            style={{ flex: 0 }}
+            onChange={(e) =>
+              setPriorityFilter(
+                e.target.value
+              )
+            }
           >
-            <option value="">All priorities</option>
-            <option value="high">🔴 High</option>
-            <option value="medium">🟡 Medium</option>
-            <option value="low">⚪ Low</option>
+            <option value="">
+              All Priorities
+            </option>
+            <option value="high">
+              🔴 High
+            </option>
+            <option value="medium">
+              🟡 Medium
+            </option>
+            <option value="low">
+              ⚪ Low
+            </option>
           </select>
+
           <button
             onClick={openCreate}
             style={{
-              background: "var(--accent)",
+              background:
+                "var(--accent)",
               color: "#fff",
-              padding: "8px 16px",
-              flex: 0,
+              padding:
+                "10px 16px",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
             }}
           >
             + New Task
           </button>
         </div>
 
-        {/* Columns */}
-        <div style={{
-          display: "flex",
-          gap: 16,
-          padding: 24,
-          flex: 1,
-          overflow: "auto",
-        }}>
-          {STAGES.map((stage) => (
-            <KanbanColumn
-              key={stage.id}
-              stage={stage}
-              tasks={tasks.filter((t) => t.stage === stage.id)}
-              onDragStart={(id) => setDraggedId(id)}
-              onDrop={() => handleDrop(stage.id)}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
+        {error && (
+          <div
+            style={{
+              color: "#ef4444",
+              padding: 12,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div
+            style={{
+              padding: 24,
+            }}
+          >
+            Loading tasks...
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              padding: 24,
+              flex: 1,
+              overflow: "auto",
+            }}
+          >
+            {STAGES.map(
+              (stage) => (
+                <KanbanColumn
+                  key={
+                    stage.id
+                  }
+                  stage={stage}
+                  tasks={
+                    groupedTasks[
+                      stage.id
+                    ] || []
+                  }
+                  onDragStart={
+                    setDraggedId
+                  }
+                  onDrop={() =>
+                    handleDrop(
+                      stage.id
+                    )
+                  }
+                  onEdit={
+                    openEdit
+                  }
+                  onDelete={
+                    handleDelete
+                  }
+                />
+              )
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Activity feed */}
-      <ActivityFeed refreshKey={activityKey} />
+      <ActivityFeed
+        refreshKey={
+          activityKey
+        }
+      />
 
-      {/* Modal */}
       {modalOpen && (
         <TaskModal
-          task={editingTask}
-          onSave={handleSave}
-          onClose={() => { setModalOpen(false); setEditingTask(null); }}
+          task={
+            editingTask
+          }
+          onSave={
+            handleSave
+          }
+          onClose={() => {
+            setModalOpen(
+              false
+            );
+            setEditingTask(
+              null
+            );
+          }}
         />
       )}
     </div>
