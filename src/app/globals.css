@@ -1,35 +1,40 @@
 /* ==========================================================
    Design tokens
+   devChart palette: deep-space indigo, with a coral spark for
+   action and a teal pulse for progress. Mono numerals nod to
+   the "dev" in devChart.
    ========================================================== */
 :root {
   /* Base surfaces */
-  --bg-grad-1: #0a0b14;
-  --bg-grad-2: #12101f;
-  --bg-grad-3: #0d1420;
+  --bg-grad-1: #07080f;
+  --bg-grad-2: #161029;
+  --bg-grad-3: #0a1420;
 
-  --surface: rgba(255, 255, 255, 0.04);
-  --surface2: rgba(255, 255, 255, 0.07);
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface2: rgba(255, 255, 255, 0.075);
   --surface-solid: #14151f;
   --border: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-strong: rgba(255, 255, 255, 0.18);
 
   /* Text */
-  --text: #f1f2f6;
-  --text-dim: #c7c9d9;
-  --muted: #888aa0;
+  --text: #f3f4fb;
+  --text-dim: #c7c9da;
+  --muted: #8d8fa6;
 
   /* Brand / accent */
   --accent: #7c5cff;
-  --accent-2: #4fd1ff;
-  --accent-gradient: linear-gradient(135deg, #7c5cff 0%, #4fd1ff 100%);
+  --accent-2: #2ce0c6;
+  --accent-warm: #ff8a5c;
+  --accent-gradient: linear-gradient(135deg, #7c5cff 0%, #ff8a5c 100%);
+  --accent-gradient-cool: linear-gradient(135deg, #7c5cff 0%, #2ce0c6 100%);
 
   /* Status colors */
-  --todo: #8b90a8;
-  --inprogress: #f5a623;
-  --done: #38d39f;
+  --todo: #9094ad;
+  --inprogress: #ffb648;
+  --done: #2ce0a8;
   --danger: #ff5d6c;
-  --warning: #f5a623;
-  --success: #38d39f;
+  --warning: #ffb648;
+  --success: #2ce0a8;
 
   /* Spacing scale */
   --space-1: 4px;
@@ -53,12 +58,15 @@
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.45);
   --shadow-glow: 0 0 0 1px rgba(124, 92, 255, 0.4), 0 8px 30px rgba(124, 92, 255, 0.25);
+  --shadow-glow-warm: 0 0 0 1px rgba(255, 138, 92, 0.38), 0 8px 26px rgba(255, 138, 92, 0.22);
 
   /* Glass */
   --glass-blur: blur(16px);
 
   /* Typography */
+  --font-display: "Sora", "Inter", system-ui, -apple-system, sans-serif;
   --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Motion */
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -67,11 +75,11 @@
   --transition-slow: 400ms var(--ease);
 }
 
-/* Light theme override - toggled via [data-theme="light"] on <html> */
+/* Light theme override */
 [data-theme="light"] {
-  --bg-grad-1: #eef0fb;
+  --bg-grad-1: #f3f0fb;
   --bg-grad-2: #ffffff;
-  --bg-grad-3: #eef4fb;
+  --bg-grad-3: #eef6f4;
 
   --surface: rgba(20, 21, 40, 0.04);
   --surface2: rgba(20, 21, 40, 0.06);
@@ -101,8 +109,9 @@ body {
 body {
   font-family: var(--font-sans);
   color: var(--text);
-  background: radial-gradient(circle at 15% 0%, rgba(124, 92, 255, 0.18), transparent 45%),
-    radial-gradient(circle at 85% 10%, rgba(79, 209, 255, 0.12), transparent 40%),
+  background: radial-gradient(circle at 12% 0%, rgba(124, 92, 255, 0.28), transparent 42%),
+    radial-gradient(circle at 88% 6%, rgba(255, 138, 92, 0.18), transparent 38%),
+    radial-gradient(circle at 50% 100%, rgba(44, 224, 198, 0.14), transparent 45%),
     linear-gradient(160deg, var(--bg-grad-1), var(--bg-grad-2) 50%, var(--bg-grad-3));
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
@@ -115,6 +124,7 @@ h2,
 h3,
 h4 {
   margin: 0;
+  font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
@@ -127,6 +137,14 @@ p {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Numerals / counts / dates lean on the mono face site-wide */
+.mono,
+.stat-pill .stat-value,
+.count-badge,
+.task-due {
+  font-family: var(--font-mono);
 }
 
 /* Scrollbars */
@@ -234,14 +252,14 @@ a:focus-visible {
 }
 
 .glass-strong {
-  background: rgba(20, 21, 31, 0.65);
+  background: rgba(15, 14, 26, 0.72);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--border-strong);
 }
 
 [data-theme="light"] .glass-strong {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 /* ==========================================================
@@ -291,6 +309,24 @@ a:focus-visible {
   }
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulseDot {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(124, 92, 255, 0.45);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(124, 92, 255, 0);
+  }
+}
+
 .fade-in {
   animation: fadeIn var(--transition-base) both;
 }
@@ -301,6 +337,10 @@ a:focus-visible {
 
 .scale-in {
   animation: scaleIn var(--transition-base) both;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -328,9 +368,9 @@ a:focus-visible {
 }
 
 .progress-track {
-  height: 6px;
+  height: 5px;
   border-radius: var(--radius-pill);
-  background: var(--surface2);
+  background: rgba(255, 255, 255, 0.09);
   overflow: hidden;
 }
 
@@ -363,11 +403,13 @@ a:focus-visible {
 }
 
 .column-drop-zone {
+  border-radius: var(--radius-md);
   transition: border-color var(--transition-base), background var(--transition-base);
 }
 
 .column-drop-zone.drag-over {
-  background: rgba(124, 92, 255, 0.06);
+  background: rgba(124, 92, 255, 0.08);
+  box-shadow: inset 0 0 0 2px rgba(124, 92, 255, 0.35);
 }
 
 .stat-card {
@@ -387,6 +429,167 @@ a:focus-visible {
 
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
+}
+
+/* ----- Icon buttons ----- */
+.icon-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.icon-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+  transform: none;
+}
+
+.icon-btn.danger:hover {
+  color: var(--danger);
+  background: rgba(255, 93, 108, 0.12);
+}
+
+/* ----- Pill button (CTA) ----- */
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-pill);
+  padding: 9px 18px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pill-btn-accent {
+  background: var(--accent-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-glow-warm);
+}
+
+/* ----- Segmented control ----- */
+.segmented {
+  display: inline-flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 2px;
+}
+
+.segmented button {
+  background: transparent;
+  border-radius: var(--radius-pill);
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.segmented button:hover {
+  transform: none;
+  color: var(--text);
+}
+
+.segmented button.active {
+  background: var(--surface-solid);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ----- Stat pills (board overview) ----- */
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+}
+
+.stat-pill .stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: var(--font-mono);
+}
+
+.stat-pill .stat-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ----- Priority chip ----- */
+.priority-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: var(--radius-pill);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.priority-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ----- Timeline (activity feed) ----- */
+.timeline-item {
+  position: relative;
+  padding-left: 34px;
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 28px;
+  bottom: -14px;
+  width: 1px;
+  background: var(--border);
+}
+
+.timeline-item:last-child::before {
+  display: none;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* ----- Empty / loading states ----- */
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 28px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
 }
 
 /* ==========================================================

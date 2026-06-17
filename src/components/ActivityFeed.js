@@ -11,6 +11,29 @@ const ACTION_ICONS = {
   completed: "🎉",
 };
 
+const ACTION_COLORS = {
+  created: "var(--done)",
+  moved: "var(--accent)",
+  deleted: "var(--danger)",
+  updated: "var(--inprogress)",
+  assigned: "var(--accent-2)",
+  completed: "var(--accent-warm)",
+};
+
+function IconRefresh() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function ActivityFeed({ refreshKey }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,35 +125,33 @@ export default function ActivityFeed({ refreshKey }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          fontWeight: 600,
-          fontSize: 13,
+          fontFamily: "var(--font-display)",
+          fontWeight: 700,
+          fontSize: 13.5,
         }}
       >
         <span>Activity Feed</span>
 
         <button
+          className="icon-btn"
           onClick={() => {
             setLoading(true);
             fetchActivities();
           }}
           title="Refresh"
-          style={{
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-            fontSize: 14,
-          }}
+          aria-label="Refresh activity"
         >
-          🔄
+          <IconRefresh />
         </button>
       </div>
 
       {/* Content */}
       <div
+        className="scrollbar-thin"
         style={{
           flex: 1,
           overflowY: "auto",
-          padding: 12,
+          padding: "16px 14px",
         }}
       >
         {loading && (
@@ -151,53 +172,40 @@ export default function ActivityFeed({ refreshKey }) {
             style={{
               textAlign: "center",
               paddingTop: 24,
-              color: "#ef4444",
+              color: "var(--danger)",
               fontSize: 12,
             }}
           >
-            {error}
+            ⚠️ {error}
           </div>
         )}
 
         {!loading && !error && logs.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              paddingTop: 24,
-              color: "var(--muted)",
-              fontSize: 12,
-            }}
-          >
+          <div className="empty-state">
             No activity yet
           </div>
         )}
 
         {!loading &&
           !error &&
-          logs.map((log) => (
-            <div
-              key={
-                log._id ||
-                `${log.taskId}-${log.createdAt}`
-              }
-              style={{
-                marginBottom: 12,
-                paddingBottom: 12,
-                borderBottom:
-                  "1px solid var(--border)",
-              }}
-            >
+          logs.map((log) => {
+            const color = ACTION_COLORS[log.action] || "var(--muted)";
+            return (
               <div
+                key={
+                  log._id ||
+                  `${log.taskId}-${log.createdAt}`
+                }
+                className="timeline-item"
                 style={{
-                  display: "flex",
-                  gap: 10,
-                  alignItems: "flex-start",
+                  marginBottom: 18,
                 }}
               >
                 <span
+                  className="timeline-dot"
                   style={{
-                    fontSize: 16,
-                    flexShrink: 0,
+                    background: `color-mix(in srgb, ${color} 18%, transparent)`,
+                    boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 35%, transparent)`,
                   }}
                 >
                   {ACTION_ICONS[log.action] || "📌"}
@@ -205,15 +213,15 @@ export default function ActivityFeed({ refreshKey }) {
 
                 <div
                   style={{
-                    flex: 1,
                     minWidth: 0,
                   }}
                 >
                   <div
                     style={{
                       fontWeight: 600,
-                      fontSize: 12,
+                      fontSize: 12.5,
                       wordBreak: "break-word",
+                      color: "var(--text)",
                     }}
                   >
                     {log.taskTitle || "Untitled Task"}
@@ -223,7 +231,7 @@ export default function ActivityFeed({ refreshKey }) {
                     <div
                       style={{
                         color: "var(--muted)",
-                        fontSize: 11,
+                        fontSize: 11.5,
                         marginTop: 4,
                         lineHeight: 1.4,
                         wordBreak: "break-word",
@@ -234,6 +242,7 @@ export default function ActivityFeed({ refreshKey }) {
                   )}
 
                   <div
+                    className="mono"
                     style={{
                       color: "var(--muted)",
                       fontSize: 10,
@@ -244,8 +253,8 @@ export default function ActivityFeed({ refreshKey }) {
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
       </div>
     </aside>
   );

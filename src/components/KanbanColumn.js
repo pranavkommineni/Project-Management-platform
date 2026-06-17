@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import TaskCard from "./TaskCard";
 
 export default function KanbanColumn({
@@ -10,26 +11,36 @@ export default function KanbanColumn({
   onEdit,
   onDelete,
 }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const handleDragOver = (e) => {
     e.preventDefault();
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
   };
 
   return (
     <div
       style={{
         background: "var(--surface)",
-        borderRadius: 12,
+        borderRadius: 14,
         border: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
         width: 320,
         flexShrink: 0,
+        overflow: "hidden",
       }}
     >
+      <div style={{ height: 3, background: stage.color, flexShrink: 0 }} />
+
       <div
         style={{
           borderBottom: "1px solid var(--border)",
-          padding: "14px 16px",
+          padding: "13px 16px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -39,27 +50,33 @@ export default function KanbanColumn({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 8,
+            gap: 9,
+            fontFamily: "var(--font-display)",
+            fontWeight: 700,
+            fontSize: 13.5,
           }}
         >
           <div
             style={{
-              width: 12,
-              height: 12,
-              borderRadius: 3,
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
               background: stage.color,
+              boxShadow: `0 0 0 3px color-mix(in srgb, ${stage.color} 18%, transparent)`,
             }}
           />
           {stage.label}
         </div>
 
         <div
+          className="count-badge"
           style={{
-            background: "var(--surface2)",
-            borderRadius: 4,
-            padding: "2px 6px",
+            background: `color-mix(in srgb, ${stage.color} 16%, transparent)`,
+            color: stage.color,
+            borderRadius: "var(--radius-pill)",
+            padding: "2px 9px",
             fontSize: 11,
-            color: "var(--muted)",
+            fontWeight: 700,
           }}
         >
           {tasks.length}
@@ -67,9 +84,12 @@ export default function KanbanColumn({
       </div>
 
       <div
+        className={`column-drop-zone scrollbar-thin${isDragOver ? " drag-over" : ""}`}
         onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
         onDrop={(e) => {
           e.preventDefault();
+          setIsDragOver(false);
           onDrop();
         }}
         style={{
@@ -82,14 +102,7 @@ export default function KanbanColumn({
         }}
       >
         {tasks.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              color: "var(--muted)",
-              fontSize: 12,
-              padding: "24px 8px",
-            }}
-          >
+          <div className="empty-state">
             Drop tasks here
           </div>
         )}
