@@ -2,7 +2,7 @@
 
 # DevChart – Project Management Platform
 
-A modern, full-stack project management platform built with **Next.js**, **MongoDB**, and **Mongoose**. DevChart helps teams organize tasks, track project progress, manage workflows, and collaborate efficiently through an intuitive Kanban-style interface.This platform is for the task management done by clubs in college.
+A modern, full-stack project management platform built with **Next.js**, **MongoDB**, and **Mongoose**. DevChart helps teams organize tasks, track project progress, manage workflows, and collaborate efficiently through an intuitive Kanban-style interface.This platform is for the task management done by clubs.This can also be used to noted the taks.
 
 ---
 
